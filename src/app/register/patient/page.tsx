@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useRouter } from 'next/navigation';
 
 export default function PatientRegister() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,6 +20,7 @@ export default function PatientRegister() {
     e.preventDefault();
     // Handle registration logic here
     console.log('Patient registration:', formData);
+    router.push('/patient/dashboard');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

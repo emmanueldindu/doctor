@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useRouter } from 'next/navigation';
 
 export default function PatientLogin() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -15,6 +17,7 @@ export default function PatientLogin() {
     e.preventDefault();
     // Handle login logic here
     console.log('Patient login:', formData);
+    router.push('/patient/dashboard');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

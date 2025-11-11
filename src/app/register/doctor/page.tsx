@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useRouter } from 'next/navigation';
 
 export default function DoctorRegister() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,6 +35,7 @@ export default function DoctorRegister() {
     e.preventDefault();
     // Handle registration logic here
     console.log('Doctor registration:', formData);
+    router.push('/doctor/complete-profile');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -184,6 +187,12 @@ export default function DoctorRegister() {
               Are you a patient?{' '}
               <Link href="/register/patient" className="text-[#2F80ED] font-medium hover:underline">
                 Register as Patient
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600">
+              Go straight to your dashboard?{' '}
+              <Link href="/doctor/dashboard" className="text-[#2F80ED] font-medium hover:underline">
+                Visit Doctor Dashboard
               </Link>
             </p>
           </div>
