@@ -58,7 +58,7 @@ export default function DoctorExpertise() {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Choose Doctor's <span className="italic text-[#2F80ED]">Expertise</span>
+            Choose Doctor&apos;s <span className="italic text-[#2F80ED]">Expertise</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Find the right specialist for your healthcare needs from our comprehensive list of medical experts.

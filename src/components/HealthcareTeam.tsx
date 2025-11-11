@@ -34,7 +34,7 @@ export default function HealthcareTeam() {
             {/* Main Description */}
             <div className="space-y-4">
               <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-                We're revolutionizing healthcare with seamless access to trusted professionals, prioritizing your journey to better health.
+                We&apos;re revolutionizing healthcare with seamless access to trusted professionals, prioritizing your journey to better health.
               </h2>
             </div>
 

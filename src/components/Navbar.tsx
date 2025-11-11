@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Navbar() {
   return (
     <nav className="flex items-center justify-between px-6 py-4 lg:px-20">
@@ -11,15 +13,15 @@ export default function Navbar() {
       </div>
       
       <div className="hidden md:flex items-center space-x-8">
-        <a href="#" className="text-[#2F80ED] font-medium">Home</a>
-        <a href="#" className="text-gray-600 hover:text-[#2F80ED] transition-colors">Services</a>
-        <a href="#" className="text-gray-600 hover:text-[#2F80ED] transition-colors">Find a Doctor</a>
-        <a href="#" className="text-gray-600 hover:text-[#2F80ED] transition-colors">About Us</a>
+        <Link href="/" className="text-[#2F80ED] font-medium">Home</Link>
+     
+        <Link href="/find-doctor" className="text-gray-600 hover:text-[#2F80ED] transition-colors">Find a Doctor</Link>
+        <Link href="/about" className="text-gray-600 hover:text-[#2F80ED] transition-colors">About Us</Link>
       </div>
       
-      <button className="bg-[#2F80ED] text-white px-6 py-2 rounded-full font-medium hover:bg-[#2563EB] transition-colors">
+      <Link href="/register/patient" className="bg-[#2F80ED] text-white px-6 py-2 rounded-full font-medium hover:bg-[#2563EB] transition-colors">
         Register
-      </button>
+      </Link>
     </nav>
   );
 }

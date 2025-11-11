@@ -51,7 +51,7 @@ export default function AppFeatures() {
             <span className="text-sm font-medium text-gray-600">✨ App Features</span>
           </div>
           <h2 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Explore Our App's <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[#2F80ED] to-purple-600">Features</span>
+            Explore Our App&apos;s <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[#2F80ED] to-purple-600">Features</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Discover powerful tools designed to make your healthcare journey seamless and efficient

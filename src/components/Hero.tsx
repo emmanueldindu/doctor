@@ -23,7 +23,7 @@ export default function HeroSection() {
               Better Health
             </h1>
             <p className="text-lg text-gray-600 max-w-md">
-              We're here to link you directly to improved health outcomes, 
+              We&apos;re here to link you directly to improved health outcomes, 
               effortlessly connecting you with the care you need.
             </p>
           </div>
