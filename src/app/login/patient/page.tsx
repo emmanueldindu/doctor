@@ -1,23 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
+import { useLogin } from '@/hooks/useAuth';
+import { authService } from '@/services/auth.service';
 
 export default function PatientLogin() {
   const router = useRouter();
+  const login = useLogin();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
 
+  useEffect(() => {
+    // Redirect if already logged in
+    const user = authService.getCurrentUser();
+    if (user) {
+      if (user.role === 'PATIENT') {
+        router.push('/patient/dashboard');
+      } else if (user.role === 'DOCTOR') {
+        router.push('/doctor/dashboard');
+      }
+    }
+  }, [router]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Patient login:', formData);
-    router.push('/patient/dashboard');
+    login.mutate(formData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +67,7 @@ export default function PatientLogin() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black  px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Enter your email"
               />
             </div>
@@ -70,7 +84,7 @@ export default function PatientLogin() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Enter your password"
               />
             </div>

@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
+import { useRegisterDoctor } from '@/hooks/useAuth';
+import { authService } from '@/services/auth.service';
+import toast from 'react-hot-toast';
 
 export default function DoctorRegister() {
   const router = useRouter();
+  const registerDoctor = useRegisterDoctor();
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,26 +21,54 @@ export default function DoctorRegister() {
     specialty: ''
   });
 
+  useEffect(() => {
+    // Redirect if already logged in
+    const user = authService.getCurrentUser();
+    if (user) {
+      if (user.role === 'PATIENT') {
+        router.push('/patient/dashboard');
+      } else if (user.role === 'DOCTOR') {
+        router.push('/doctor/dashboard');
+      }
+    }
+  }, [router]);
+
   const specialties = [
-    'Cardiologist',
-    'Dermatologist',
-    'Pediatrician',
-    'Neurologist',
-    'Orthopedic',
-    'Psychiatrist',
-    'General Physician',
-    'Gynecologist',
-    'Ophthalmologist',
-    'ENT Specialist',
-    'Dentist',
-    'Other'
+    'CARDIOLOGIST',
+    'DERMATOLOGIST',
+    'PEDIATRICIAN',
+    'NEUROLOGIST',
+    'ORTHOPEDIC',
+    'PSYCHIATRIST',
+    'GENERAL_PHYSICIAN',
+    'GYNECOLOGIST',
+    'OPHTHALMOLOGIST',
+    'ENT_SPECIALIST',
+    'DENTIST',
+    'OTHER'
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration logic here
-    console.log('Doctor registration:', formData);
-    router.push('/doctor/complete-profile');
+    
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match!');
+      return;
+    }
+
+    if (!formData.specialty) {
+      toast.error('Please select your specialty');
+      return;
+    }
+
+    // Register doctor
+    registerDoctor.mutate({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      specialty: formData.specialty,
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -76,7 +109,7 @@ export default function DoctorRegister() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Dr. John Doe"
               />
             </div>
@@ -93,7 +126,7 @@ export default function DoctorRegister() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="doctor@example.com"
               />
             </div>
@@ -133,7 +166,7 @@ export default function DoctorRegister() {
                 onChange={handleChange}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Create a strong password"
               />
             </div>
@@ -151,7 +184,7 @@ export default function DoctorRegister() {
                 onChange={handleChange}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Confirm your password"
               />
             </div>
@@ -159,9 +192,10 @@ export default function DoctorRegister() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+              disabled={registerDoctor.isPending}
+              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Register as Doctor
+              {registerDoctor.isPending ? 'Creating Account...' : 'Register as Doctor'}
             </button>
           </form>
 

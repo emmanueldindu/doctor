@@ -1,23 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
+import { useLogin } from '@/hooks/useAuth';
+import { authService } from '@/services/auth.service';
 
 export default function DoctorLogin() {
   const router = useRouter();
+  const login = useLogin();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
 
+  useEffect(() => {
+    // Redirect if already logged in
+    const user = authService.getCurrentUser();
+    if (user) {
+      if (user.role === 'PATIENT') {
+        router.push('/patient/dashboard');
+      } else if (user.role === 'DOCTOR') {
+        router.push('/doctor/dashboard');
+      }
+    }
+  }, [router]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Doctor login:', formData);
-    router.push('/doctor/dashboard');
+    login.mutate(formData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,9 +111,10 @@ export default function DoctorLogin() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+              disabled={login.isPending}
+              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign In
+              {login.isPending ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 

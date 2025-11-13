@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCompleteProfile } from '@/hooks/useAuth';
+import toast from 'react-hot-toast';
 
 export default function CompleteProfile() {
   const router = useRouter();
+  const completeProfile = useCompleteProfile();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -22,6 +25,16 @@ export default function CompleteProfile() {
   };
 
   const handleNext = () => {
+    // Validate current step
+    if (currentStep === 1 && !profileData.bio.trim()) {
+      toast.error('Please enter your bio');
+      return;
+    }
+    if (currentStep === 2 && !profileData.hospital.trim()) {
+      toast.error('Please enter your hospital');
+      return;
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -35,9 +48,14 @@ export default function CompleteProfile() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Profile completed:', profileData);
-    // Save profile data
-    router.push('/doctor/dashboard');
+    
+    if (!profileData.experience.trim()) {
+      toast.error('Please enter your years of experience');
+      return;
+    }
+    
+    // Submit profile data
+    completeProfile.mutate(profileData);
   };
 
   const handleSkip = () => {
@@ -212,9 +230,10 @@ export default function CompleteProfile() {
               <>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+                  disabled={completeProfile.isPending}
+                  className="flex-1 bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Complete Profile
+                  {completeProfile.isPending ? 'Saving Profile...' : 'Complete Profile'}
                 </button>
                 {/* <button
                   type="button"

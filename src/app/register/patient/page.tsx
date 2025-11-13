@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
+import { useRegisterPatient } from '@/hooks/useAuth';
+import { authService } from '@/services/auth.service';
+import toast from 'react-hot-toast';
 
 export default function PatientRegister() {
   const router = useRouter();
+  const registerPatient = useRegisterPatient();
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -16,11 +21,39 @@ export default function PatientRegister() {
     gender: ''
   });
 
+  useEffect(() => {
+    // Redirect if already logged in
+    const user = authService.getCurrentUser();
+    if (user) {
+      if (user.role === 'PATIENT') {
+        router.push('/patient/dashboard');
+      } else if (user.role === 'DOCTOR') {
+        router.push('/doctor/dashboard');
+      }
+    }
+  }, [router]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration logic here
-    console.log('Patient registration:', formData);
-    router.push('/patient/dashboard');
+    
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match!');
+      return;
+    }
+
+    if (!formData.gender) {
+      toast.error('Please select your gender');
+      return;
+    }
+
+    // Register patient
+    registerPatient.mutate({
+      name: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      gender: formData.gender.toUpperCase() as 'MALE' | 'FEMALE',
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -56,7 +89,7 @@ export default function PatientRegister() {
                 value={formData.fullName}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Enter your full name"
               />
             </div>
@@ -73,7 +106,7 @@ export default function PatientRegister() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Enter your email"
               />
             </div>
@@ -111,7 +144,7 @@ export default function PatientRegister() {
                 onChange={handleChange}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Create a password"
               />
             </div>
@@ -129,7 +162,7 @@ export default function PatientRegister() {
                 onChange={handleChange}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 text-black  border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 placeholder="Confirm your password"
               />
             </div>
@@ -137,9 +170,10 @@ export default function PatientRegister() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+              disabled={registerPatient.isPending}
+              className="w-full bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Account
+              {registerPatient.isPending ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
