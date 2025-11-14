@@ -2,59 +2,62 @@
 
 import PatientSidebar from '@/components/PatientSidebar';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { authService } from '@/services/auth.service';
+import { usePatientStats, useUpcomingAppointments } from '@/hooks/usePatient';
+import { format } from 'date-fns';
 
 export default function PatientDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [patient, setPatient] = useState<any>(null);
 
-  // Dummy data
-  const patient = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    avatar: 'JD'
+  // Fetch data from backend
+  const { data: statsData, isLoading: statsLoading } = usePatientStats();
+  const { data: upcomingData, isLoading: appointmentsLoading } = useUpcomingAppointments();
+
+  useEffect(() => {
+    // Get current user
+    const currentUser = authService.getCurrentUser();
+    setPatient(currentUser);
+  }, []);
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: 'Dr. Richard James',
-      specialty: 'Cardiologist',
-      date: 'Nov 15, 2024',
-      time: '10:00 AM',
-      status: 'Confirmed'
-    },
-    {
-      id: 2,
-      doctor: 'Dr. Sarah Wilson',
-      specialty: 'Dermatologist',
-      date: 'Nov 18, 2024',
-      time: '02:30 PM',
-      status: 'Pending'
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch {
+      return dateString;
     }
-  ];
+  };
 
-  const recentActivity = [
-    {
-      id: 1,
-      action: 'Appointment booked with Dr. Richard James',
-      time: '2 hours ago'
-    },
-    {
-      id: 2,
-      action: 'Prescription received from Dr. Sarah Wilson',
-      time: '1 day ago'
-    },
-    {
-      id: 3,
-      action: 'Lab results uploaded',
-      time: '3 days ago'
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-green-100 text-green-700';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-700';
+      case 'COMPLETED':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
-  ];
+  };
 
   const stats = [
     {
       label: 'Total Appointments',
-      value: '12',
+      value: statsLoading ? '...' : statsData?.totalAppointments || '0',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -64,7 +67,7 @@ export default function PatientDashboard() {
     },
     {
       label: 'Upcoming',
-      value: '2',
+      value: statsLoading ? '...' : statsData?.upcomingAppointments || '0',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -74,7 +77,7 @@ export default function PatientDashboard() {
     },
     {
       label: 'Completed',
-      value: '8',
+      value: statsLoading ? '...' : statsData?.completedAppointments || '0',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -84,7 +87,7 @@ export default function PatientDashboard() {
     },
     {
       label: 'Cancelled',
-      value: '2',
+      value: statsLoading ? '...' : statsData?.cancelledAppointments || '0',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -114,7 +117,9 @@ export default function PatientDashboard() {
             </button>
 
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Welcome back, {patient.name}!</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                Welcome back, {patient ? patient.name : 'Loading...'}!
+              </h1>
               <p className="text-gray-600 mt-1 text-sm lg:text-base">Here&apos;s what&apos;s happening with your health today</p>
             </div>
           </div>
@@ -130,7 +135,7 @@ export default function PatientDashboard() {
 
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold">
-                {patient.avatar}
+                {patient ? getInitials(patient.name) : '??'}
               </div>
             </div>
           </div>
@@ -209,34 +214,41 @@ export default function PatientDashboard() {
             </div>
 
             <div className="space-y-4">
-              {upcomingAppointments.map((appointment) => (
-                <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold">
-                      {appointment.doctor.split(' ')[1][0]}
+              {appointmentsLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading appointments...</div>
+              ) : upcomingData && upcomingData.length > 0 ? (
+                upcomingData.map((appointment: any) => (
+                  <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold">
+                        {getInitials(appointment.doctorName)}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{appointment.doctorName}</h3>
+                        <p className="text-sm text-gray-600">{appointment.doctorSpecialty}</p>
+                      </div>
                     </div>
+
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">{formatDate(appointment.date)}</p>
+                      <p className="text-sm text-gray-600">{appointment.time}</p>
+                    </div>
+
                     <div>
-                      <h3 className="font-semibold text-gray-900">{appointment.doctor}</h3>
-                      <p className="text-sm text-gray-600">{appointment.specialty}</p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                        {appointment.status}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{appointment.date}</p>
-                    <p className="text-sm text-gray-600">{appointment.time}</p>
-                  </div>
-
-                  <div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      appointment.status === 'Confirmed' 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {appointment.status}
-                    </span>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No upcoming appointments</p>
+                  <Link href="/find-doctor" className="text-[#2F80ED] hover:underline mt-2 inline-block">
+                    Book an appointment
+                  </Link>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -245,15 +257,23 @@ export default function PatientDashboard() {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
 
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex gap-3">
-                  <div className="w-2 h-2 bg-[#2F80ED] rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm text-gray-900">{activity.action}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+              {upcomingData && upcomingData.length > 0 ? (
+                upcomingData.slice(0, 3).map((appointment: any) => (
+                  <div key={appointment.id} className="flex gap-3">
+                    <div className="w-2 h-2 bg-[#2F80ED] rounded-full mt-2"></div>
+                    <div>
+                      <p className="text-sm text-gray-900">
+                        Appointment with {appointment.doctorName}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatDate(appointment.date)} at {appointment.time}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
+              )}
             </div>
           </div>
         </div>

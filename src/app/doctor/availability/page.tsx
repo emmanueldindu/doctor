@@ -1,11 +1,16 @@
 'use client';
 
 import DoctorSidebar from '@/components/DoctorSidebar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '@/lib/api';
 
 export default function DoctorAvailability() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [availableDays, setAvailableDays] = useState<number[]>([1, 2, 3, 4, 5]); // Monday to Friday
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const daysOfWeek = [
     { id: 0, name: 'Sunday', short: 'Sun' },
@@ -23,9 +28,32 @@ export default function DoctorAvailability() {
     evening: ['05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM']
   };
 
-  const [selectedSlots, setSelectedSlots] = useState<string[]>([
-    '09:00 AM', '09:30 AM', '10:00 AM', '02:00 PM', '02:30 PM', '03:00 PM'
-  ]);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+
+  // Load existing availability on mount
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      try {
+        setInitialLoading(true);
+        const response = await api.get('/availability/doctor/my-availability');
+        
+        if (response.data.availableDays && response.data.timeSlots) {
+          setAvailableDays(response.data.availableDays);
+          setSelectedSlots(response.data.timeSlots);
+        }
+      } catch (err: any) {
+        console.error('Error fetching availability:', err);
+        // If no availability exists yet, that's okay - just start with empty arrays
+        if (err.response?.status !== 404) {
+          setError('Failed to load existing availability');
+        }
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, []);
 
   const toggleDay = (dayId: number) => {
     setAvailableDays(prev =>
@@ -43,11 +71,83 @@ export default function DoctorAvailability() {
     );
   };
 
-  const handleSave = () => {
-    console.log('Available Days:', availableDays);
-    console.log('Selected Time Slots:', selectedSlots);
-    alert('Availability settings saved!');
+  const handleSave = async () => {
+    // Clear previous messages
+    setError(null);
+    setSuccess(null);
+
+    // Validation
+    if (availableDays.length === 0) {
+      setError('Please select at least one available day');
+      return;
+    }
+
+    if (selectedSlots.length === 0) {
+      setError('Please select at least one time slot');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post('/availability/doctor/set-availability', {
+        availableDays,
+        timeSlots: selectedSlots,
+      });
+
+      setSuccess(`Availability saved successfully! ${response.data.totalSlots} slots created.`);
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: any) {
+      console.error('Error saving availability:', err);
+      setError(
+        err.response?.data?.error || 
+        'Failed to save availability. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleClear = async () => {
+    if (!confirm('Are you sure you want to clear all your availability settings?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.delete('/availability/doctor/clear-availability');
+      
+      setAvailableDays([]);
+      setSelectedSlots([]);
+      setSuccess('Availability cleared successfully');
+      
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: any) {
+      console.error('Error clearing availability:', err);
+      setError('Failed to clear availability. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (initialLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <DoctorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 p-4 lg:p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2F80ED] mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading availability settings...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -71,6 +171,42 @@ export default function DoctorAvailability() {
             </div>
             <p className="text-gray-600 mt-1">Set your available days and time slots</p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800">Error</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+              <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-green-800">Success</h3>
+                <p className="text-sm text-green-700 mt-1">{success}</p>
+              </div>
+              <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* Available Days */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-6">
@@ -186,16 +322,31 @@ export default function DoctorAvailability() {
             </div>
           </div>
 
-          {/* Save Button */}
+          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
               onClick={handleSave}
-              className="flex-1 bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+              disabled={loading}
+              className="flex-1 bg-[#2F80ED] text-white py-3 rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Save Availability
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Save Availability'
+              )}
             </button>
-            <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-              Cancel
+            <button 
+              onClick={handleClear}
+              disabled={loading || (availableDays.length === 0 && selectedSlots.length === 0)}
+              className="px-6 py-3 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear All
             </button>
           </div>
         </div>

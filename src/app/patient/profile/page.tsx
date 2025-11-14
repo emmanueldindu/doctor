@@ -1,19 +1,66 @@
 'use client';
 
 import PatientSidebar from '@/components/PatientSidebar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '@/lib/api';
+import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function PatientProfile() {
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 234 567 8900',
-    dateOfBirth: '1990-05-15',
-    gender: 'male',
-    address: '123 Main Street, New York, NY 10001',
-    bloodGroup: 'O+',
-    allergies: 'Penicillin'
+    name: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
+    address: '',
+    bloodGroup: '',
+    allergies: ''
   });
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/users/me');
+      const userData = response.data;
+      
+      // Format date for input
+      let formattedDate = '';
+      if (userData.dateOfBirth) {
+        const date = new Date(userData.dateOfBirth);
+        formattedDate = date.toISOString().split('T')[0];
+      }
+      
+      setFormData({
+        name: userData.name || '',
+        email: userData.email || '',
+        phone: userData.phone || '',
+        dateOfBirth: formattedDate,
+        gender: userData.gender || '',
+        address: userData.address || '',
+        bloodGroup: userData.bloodGroup || '',
+        allergies: userData.allergies || ''
+      });
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      if (error.response?.status === 401) {
+        toast.error('Please login to view profile');
+        setTimeout(() => router.push('/login'), 1500);
+      } else {
+        toast.error('Failed to load profile');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -22,15 +69,83 @@ export default function PatientProfile() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Profile updated:', formData);
+    
+    try {
+      setSaving(true);
+      await api.patch('/users/patient/update-profile', {
+        name: formData.name,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        address: formData.address,
+        bloodGroup: formData.bloodGroup,
+        allergies: formData.allergies
+      });
+      
+      toast.success('Profile updated successfully!');
+      fetchProfile(); // Refresh data
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to update profile';
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const getInitials = (name: string) => {
+    if (!name) return 'P';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <PatientSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 p-4 lg:p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2F80ED] mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading profile...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#10B981',
+            },
+          },
+          error: {
+            style: {
+              background: '#EF4444',
+            },
+          },
+        }}
+      />
       <PatientSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 p-4 lg:p-8">
@@ -57,10 +172,10 @@ export default function PatientProfile() {
             {/* Avatar Section */}
             <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-200">
               <div className="w-24 h-24 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold text-3xl">
-                JD
+                {getInitials(formData.name)}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{formData.fullName}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{formData.name || 'Patient'}</h2>
                 <p className="text-gray-600">{formData.email}</p>
                 <button className="mt-2 text-sm text-[#2F80ED] hover:underline font-medium">
                   Change Profile Picture
@@ -73,16 +188,16 @@ export default function PatientProfile() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Full Name */}
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                     Full Name
                   </label>
                   <input
                     type="text"
-                    id="fullName"
-                    name="fullName"
-                    value={formData.fullName}
+                    id="name"
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -97,7 +212,7 @@ export default function PatientProfile() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -112,7 +227,7 @@ export default function PatientProfile() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -127,7 +242,7 @@ export default function PatientProfile() {
                     name="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                   />
                 </div>
 
@@ -143,8 +258,9 @@ export default function PatientProfile() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all bg-white"
                   >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
+                    <option value="">Select Gender</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
                   </select>
                 </div>
 
@@ -159,7 +275,7 @@ export default function PatientProfile() {
                     name="bloodGroup"
                     value={formData.bloodGroup}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                    className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                   />
                 </div>
               </div>
@@ -175,7 +291,7 @@ export default function PatientProfile() {
                   value={formData.address}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 />
               </div>
 
@@ -191,7 +307,7 @@ export default function PatientProfile() {
                   value={formData.allergies}
                   onChange={handleChange}
                   placeholder="List any allergies"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
+                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
                 />
               </div>
 
@@ -199,15 +315,28 @@ export default function PatientProfile() {
               <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#2F80ED] text-white rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
+                  disabled={saving}
+                  className="px-6 py-3 bg-[#2F80ED] text-white rounded-lg font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Save Changes
+                  {saving ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
                 <button
                   type="button"
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  onClick={fetchProfile}
+                  disabled={saving}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  Reset
                 </button>
               </div>
             </form>

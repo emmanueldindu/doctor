@@ -2,8 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLogout } from '@/hooks/useAuth';
+import api from '@/lib/api';
+
+interface DoctorData {
+  id: string;
+  name: string;
+  email: string;
+  specialty: string;
+  role: string;
+}
 
 interface DoctorSidebarProps {
   isOpen?: boolean;
@@ -13,6 +22,38 @@ interface DoctorSidebarProps {
 export default function DoctorSidebar({ isOpen = true, onClose }: DoctorSidebarProps) {
   const pathname = usePathname();
   const logout = useLogout();
+  const [doctorData, setDoctorData] = useState<DoctorData | null>(null);
+
+  useEffect(() => {
+    fetchDoctorData();
+  }, []);
+
+  const fetchDoctorData = async () => {
+    try {
+      const response = await api.get('/users/me');
+      setDoctorData(response.data);
+    } catch (error) {
+      console.error('Error fetching doctor data:', error);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'DR';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const formatSpecialty = (specialty: string) => {
+    if (!specialty) return '';
+    return specialty
+      .split('_')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   const menuItems = [
     {
@@ -101,12 +142,16 @@ export default function DoctorSidebar({ isOpen = true, onClose }: DoctorSidebarP
         {/* Doctor Badge */}
         <div className="p-4 bg-blue-50 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold">
-              DR
+            <div className="w-10 h-10 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {doctorData ? getInitials(doctorData.name) : 'DR'}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Dr. Richard James</p>
-              <p className="text-xs text-gray-600">Cardiologist</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {doctorData ? doctorData.name : 'Loading...'}
+              </p>
+              <p className="text-xs text-gray-600 truncate">
+                {doctorData?.specialty ? formatSpecialty(doctorData.specialty) : ''}
+              </p>
             </div>
           </div>
         </div>

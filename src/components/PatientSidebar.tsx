@@ -2,8 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLogout } from '@/hooks/useAuth';
+import api from '@/lib/api';
+
+interface PatientData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface PatientSidebarProps {
   isOpen?: boolean;
@@ -13,6 +21,30 @@ interface PatientSidebarProps {
 export default function PatientSidebar({ isOpen = true, onClose }: PatientSidebarProps) {
   const pathname = usePathname();
   const logout = useLogout();
+  const [patientData, setPatientData] = useState<PatientData | null>(null);
+
+  useEffect(() => {
+    fetchPatientData();
+  }, []);
+
+  const fetchPatientData = async () => {
+    try {
+      const response = await api.get('/users/me');
+      setPatientData(response.data);
+    } catch (error) {
+      console.error('Error fetching patient data:', error);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'P';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const menuItems = [
     {
@@ -105,6 +137,23 @@ export default function PatientSidebar({ isOpen = true, onClose }: PatientSideba
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+
+        {/* Patient Badge */}
+        <div className="p-4 bg-blue-50 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {patientData ? getInitials(patientData.name) : 'P'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {patientData ? patientData.name : 'Loading...'}
+              </p>
+              <p className="text-xs text-gray-600 truncate">
+                {patientData?.email || ''}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Navigation Menu */}
