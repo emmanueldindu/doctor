@@ -1,6 +1,6 @@
 'use client';
 
-import PatientSidebar from '@/components/PatientSidebar';
+import DoctorSidebar from '@/components/DoctorSidebar';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -8,16 +8,16 @@ import toast, { Toaster } from 'react-hot-toast';
 
 interface ChatContact {
   id: string;
-  doctorId: string;
-  doctorName: string;
-  doctorSpecialty: string;
+  patientId: string;
+  patientName: string;
+  patientGender: string;
   lastAppointmentDate: string;
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount?: number;
 }
 
-export default function PatientChat() {
+export default function DoctorChat() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -31,32 +31,32 @@ export default function PatientChat() {
   const fetchChatContacts = async () => {
     try {
       setLoading(true);
-      // Fetch confirmed appointments to get list of doctors
-      const response = await api.get('/appointments/patient/my-appointments');
+      // Fetch confirmed appointments to get list of patients
+      const response = await api.get('/appointments/doctor/my-appointments');
       const appointments = response.data;
 
-      // Filter confirmed appointments and group by doctor
+      // Filter confirmed appointments and group by patient
       const confirmedAppointments = appointments.filter(
         (apt: any) => apt.status === 'CONFIRMED' || apt.status === 'COMPLETED'
       );
 
-      // Create unique doctor contacts and fetch last message for each
-      const doctorMap = new Map();
+      // Create unique patient contacts and fetch last message for each
+      const patientMap = new Map();
       const contactPromises = confirmedAppointments.map(async (apt: any) => {
-        if (!doctorMap.has(apt.doctorId)) {
-          doctorMap.set(apt.doctorId, true);
+        if (!patientMap.has(apt.patientId)) {
+          patientMap.set(apt.patientId, true);
           
           try {
-            // Fetch last message for this doctor
-            const messagesResponse = await api.get(`/messages/conversation/${apt.doctorId}`);
+            // Fetch last message for this patient
+            const messagesResponse = await api.get(`/messages/conversation/${apt.patientId}`);
             const messages = messagesResponse.data;
             const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
             
             return {
               id: apt.id,
-              doctorId: apt.doctorId,
-              doctorName: apt.doctor?.name || 'Doctor',
-              doctorSpecialty: apt.doctor?.specialty || '',
+              patientId: apt.patientId,
+              patientName: apt.patient?.name || 'Patient',
+              patientGender: apt.patient?.gender || '',
               lastAppointmentDate: apt.appointmentDate,
               lastMessage: lastMsg?.message || '',
               lastMessageTime: lastMsg?.createdAt || apt.appointmentDate,
@@ -65,9 +65,9 @@ export default function PatientChat() {
           } catch (error) {
             return {
               id: apt.id,
-              doctorId: apt.doctorId,
-              doctorName: apt.doctor?.name || 'Doctor',
-              doctorSpecialty: apt.doctor?.specialty || '',
+              patientId: apt.patientId,
+              patientName: apt.patient?.name || 'Patient',
+              patientGender: apt.patient?.gender || '',
               lastAppointmentDate: apt.appointmentDate,
               lastMessage: '',
               lastMessageTime: apt.appointmentDate,
@@ -94,16 +94,8 @@ export default function PatientChat() {
     }
   };
 
-  const formatSpecialty = (specialty: string) => {
-    if (!specialty) return '';
-    return specialty
-      .split('_')
-      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
   const getInitials = (name: string) => {
-    if (!name) return 'D';
+    if (!name) return 'P';
     return name
       .split(' ')
       .map(n => n[0])
@@ -135,18 +127,17 @@ export default function PatientChat() {
   };
 
   const filteredContacts = contacts.filter(contact =>
-    contact.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.doctorSpecialty.toLowerCase().includes(searchQuery.toLowerCase())
+    contact.patientName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleChatClick = (contact: ChatContact) => {
-    router.push(`/patient/chat/${contact.doctorId}`);
+    router.push(`/doctor/chat/${contact.patientId}`);
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Toaster position="top-center" />
-      <PatientSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DoctorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-4xl mx-auto">
@@ -163,7 +154,7 @@ export default function PatientChat() {
               </button>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Messages</h1>
             </div>
-            <p className="text-gray-600">Chat with your doctors</p>
+            <p className="text-gray-600">Chat with your patients</p>
           </div>
 
           {/* Search Bar */}
@@ -179,7 +170,7 @@ export default function PatientChat() {
               </svg>
               <input
                 type="text"
-                placeholder="Search doctors..."
+                placeholder="Search patients..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full text-black pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2F80ED] focus:border-transparent outline-none transition-all"
@@ -204,19 +195,19 @@ export default function PatientChat() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {searchQuery ? 'No doctors found' : 'No chats yet'}
+                  {searchQuery ? 'No patients found' : 'No chats yet'}
                 </h3>
                 <p className="text-gray-600 mb-4">
                   {searchQuery
                     ? 'Try searching with a different name'
-                    : 'Book and confirm an appointment to start chatting with doctors'}
+                    : 'You will see your patients here once you have confirmed appointments'}
                 </p>
                 {!searchQuery && (
                   <button
-                    onClick={() => router.push('/find-doctor')}
+                    onClick={() => router.push('/doctor/appointments')}
                     className="px-6 py-2 bg-[#2F80ED] text-white rounded-lg font-medium hover:bg-[#2563EB] transition-colors"
                   >
-                    Find Doctors
+                    View Appointments
                   </button>
                 )}
               </div>
@@ -230,8 +221,8 @@ export default function PatientChat() {
                   >
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-12 h-12 bg-[#2F80ED] rounded-full flex items-center justify-center text-white font-semibold">
-                        {getInitials(contact.doctorName)}
+                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        {getInitials(contact.patientName)}
                       </div>
                       {contact.unreadCount && contact.unreadCount > 0 && (
                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -244,7 +235,7 @@ export default function PatientChat() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-gray-900 truncate">
-                          {contact.doctorName}
+                          {contact.patientName}
                         </h3>
                         <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
                           {formatDate(contact.lastMessageTime || contact.lastAppointmentDate)}
@@ -252,10 +243,10 @@ export default function PatientChat() {
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-600 truncate flex-1">
-                          {contact.lastMessage || formatSpecialty(contact.doctorSpecialty)}
+                          {contact.lastMessage || (contact.patientGender ? `${contact.patientGender.charAt(0) + contact.patientGender.slice(1).toLowerCase()} Patient` : 'Patient')}
                         </p>
                         {contact.unreadCount && contact.unreadCount > 0 && (
-                          <div className="w-5 h-5 bg-[#2F80ED] rounded-full flex items-center justify-center text-white text-xs font-bold ml-2 flex-shrink-0">
+                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold ml-2 flex-shrink-0">
                             {contact.unreadCount}
                           </div>
                         )}
