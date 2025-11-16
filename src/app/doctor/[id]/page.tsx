@@ -15,6 +15,8 @@ interface DoctorAvailability {
   doctorName: string;
   availableDays: number[];
   availability: Record<number, string[]>;
+
+  // mdmdm
 }
 
 export default function DoctorDetails() {
