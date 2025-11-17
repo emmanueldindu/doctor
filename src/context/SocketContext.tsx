@@ -41,7 +41,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
 
     // Initialize socket connection
-    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050', {
+    // Remove /api from the URL for Socket.IO connection
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                      process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 
+                      'http://localhost:5050';
+    
+    const socketInstance = io(socketUrl, {
       auth: {
         token,
       },
