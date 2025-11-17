@@ -42,16 +42,23 @@ export default function DoctorChatRoom() {
     if (!socket) return;
 
     const handleMessageReceive = (data: any) => {
+      console.log('📨 Received message:', data);
       if (data.senderId === patientId) {
         const newMsg: Message = {
-          id: Date.now().toString(),
+          id: data.id || Date.now().toString(),
           senderId: data.senderId,
           receiverId: currentUserId,
           message: data.message,
-          timestamp: data.timestamp,
+          timestamp: data.timestamp || new Date().toISOString(),
           isRead: false,
         };
-        setMessages((prev) => [...prev, newMsg]);
+        setMessages((prev) => {
+          // Avoid duplicates
+          if (prev.some(msg => msg.id === newMsg.id)) {
+            return prev;
+          }
+          return [...prev, newMsg];
+        });
       }
     };
 
@@ -143,7 +150,7 @@ export default function DoctorChatRoom() {
         message: newMessage,
       });
 
-      // Add message to local state
+      // Add message to local state using functional update
       const sentMessage: Message = {
         id: response.data.id,
         senderId: currentUserId,
@@ -153,7 +160,7 @@ export default function DoctorChatRoom() {
         isRead: false,
       };
       
-      setMessages([...messages, sentMessage]);
+      setMessages((prev) => [...prev, sentMessage]);
       setNewMessage('');
       
       // Emit socket event for real-time delivery
@@ -161,6 +168,8 @@ export default function DoctorChatRoom() {
         socket.emit('message:send', {
           receiverId: patientId,
           message: newMessage,
+          timestamp: response.data.createdAt,
+          id: response.data.id,
         });
       }
     } catch (error) {
